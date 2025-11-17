@@ -1,0 +1,54 @@
+name: Build PS1 BIN/CUE
+
+on:
+  push:
+    branches:
+      - "main"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y build-essential cmake git
+
+      - name: Download PSn00bSDK
+        run: |
+          git clone https://github.com/Lameguy64/PSn00bSDK.git
+          cd PSn00bSDK
+          git submodule update --init --recursive
+
+      - name: Build PSn00bSDK
+        run: |
+          cd PSn00bSDK
+          mkdir build
+          cd build
+          cmake ..
+          make
+
+      - name: Build your PS1 game
+        run: |
+          mkdir build_game
+          cd build_game
+          cmake ..
+          make
+
+      - name: Generate BIN and CUE
+        run: |
+          cd build_game
+          mkisofs -o game.bin .
+          echo "FILE \"game.bin\" BINARY" > game.cue
+          echo "  TRACK 01 MODE2/2352" >> game.cue
+          echo "    INDEX 01 00:00:00" >> game.cue
+
+      - name: Upload artifacts (BIN+CUE)
+        uses: actions/upload-artifact@v4
+        with:
+          name: PS1-BIN-CUE
+          path: build_game/
