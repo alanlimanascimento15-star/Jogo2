@@ -3,49 +3,25 @@ name: Build PS1 Game
 on:
   push:
     branches: [ "main" ]
-  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install dependencies
-        run: |
-          sudo apt update
-          sudo apt install -y build-essential git python3 python3-pip wget
+      - name: Unzip Game
+        run: unzip TerraFragmentada.zip -d gamefiles
 
-      - name: Install mkpsxiso
+      - name: Prepare Files
         run: |
-          git clone https://github.com/Lameguy64/mkpsxiso.git
-          cd mkpsxiso
-          make
-          sudo cp mkpsxiso /usr/local/bin/
+          mkdir output
+          cp -r gamefiles/* output/
 
-      - name: Unzip TerraFragmentada.zip
-        run: |
-          unzip TerraFragmentada.zip -d gamefiles
-
-      - name: Create XML for ISO
-        run: |
-          echo '<?xml version="1.0" encoding="UTF-8"?>' > layout.xml
-          echo '<iso system="psx">' >> layout.xml
-          echo '  <file src="gamefiles/SYSTEM.CNF" />' >> layout.xml
-          echo '  <file src="gamefiles/SLUS_000.00" />' >> layout.xml
-          echo '  <directory src="gamefiles" />' >> layout.xml
-          echo '</iso>' >> layout.xml
-
-      - name: Build BIN and CUE
-        run: |
-          mkpsxiso -y layout.xml -o TerraFragmentada.bin
-
-      - name: Upload final ZIP output
-        uses: actions/upload-artifact@v3
+      - name: Upload final ZIP
+        uses: actions/upload-artifact@v4
         with:
           name: TerraFragmentada-Final
-          path: |
-            TerraFragmentada.bin
-            TerraFragmentada.cue
+          path: output/
