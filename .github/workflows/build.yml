@@ -9,19 +9,35 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+    - name: Checkout
+      uses: actions/checkout@v4
 
-      - name: Unzip Game
-        run: unzip TerraFragmentada.zip -d gamefiles
+    - name: Install tools
+      run: |
+        sudo apt update
+        sudo apt install -y genisoimage bchunk unzip zip
 
-      - name: Prepare Files
-        run: |
-          mkdir output
-          cp -r gamefiles/* output/
+    - name: Unzip Game
+      run: unzip TerraFragmentada.zip -d game
 
-      - name: Upload final ZIP
-        uses: actions/upload-artifact@v4
-        with:
-          name: TerraFragmentada-Final
-          path: output/
+    - name: Build ISO
+      run: |
+        genisoimage -o game.iso -V "TERRAFRAG" -sysid "PLAYSTATION" -volset "1" -publisher "ALAN" -p "ALAN" -A "PS1GAME" game/
+
+    - name: Convert ISO to BIN/CUE
+      run: |
+        bchunk game.iso TerraFragmentada TerraFragmentada
+
+    - name: Prepare final ZIP
+      run: |
+        mkdir output
+        mv TerraFragmentada01.bin output/TerraFragmentada.bin
+        mv TerraFragmentada01.cue output/TerraFragmentada.cue
+        cd output
+        zip TerraFragmentada-Final.zip TerraFragmentada.bin TerraFragmentada.cue
+
+    - name: Upload final ZIP
+      uses: actions/upload-artifact@v3
+      with:
+        name: TerraFragmentada-PS1-Final
+        path: output/TerraFragmentada-Final.zip
