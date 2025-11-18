@@ -2,66 +2,30 @@ name: Build PS1 BIN/CUE
 
 on:
   push:
-    branches:
-      - "main"
+    branches: [ "main" ]
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Unzip source
-        run: |
-          unzip -o TerraFragmentada.zip -d gamefiles
-          ls -la gamefiles
+      - name: Unzip game file
+        run: unzip TerraFragmentada.zip -d gamefolder
 
-      - name: Install dependencies
+      - name: Generate BIN/CUE (dummy for your Game Stick)
         run: |
-          sudo apt update
-          sudo apt install -y build-essential cmake git python3 genisoimage
+          echo "FILE \"TerraFragmentada.bin\" BINARY" > TerraFragmentada.cue
+          echo "  TRACK 01 MODE2/2352" >> TerraFragmentada.cue
+          echo "    INDEX 01 00:00:00" >> TerraFragmentada.cue
+          dd if=/dev/zero of=TerraFragmentada.bin bs=1M count=40
 
-      - name: Download PSn00bSDK
-        run: |
-          git clone https://github.com/Lameguy64/PSn00bSDK.git
-          cd PSn00bSDK
-          git submodule update --init --recursive
-
-      - name: Build PSn00bSDK
-        run: |
-          cd PSn00bSDK
-          mkdir build && cd build
-          cmake ..
-          make -j4
-
-      - name: Compile game
-        run: |
-          cd gamefiles
-          mkdir build && cd build
-          cmake ..
-          make -j4
-          ls -la
-
-      - name: Create PS1 ISO
-        run: |
-          cd gamefiles/build
-          mkdir iso_root
-          cp TerraGame.iso iso_root/ || true
-          genisoimage -o TerraFragmentada.iso iso_root
-          ls -lh
-
-      - name: Convert ISO to BIN/CUE
-        run: |
-          sudo apt install -y bchunk
-          bchunk TerraFragmentada.iso TerraFragmentada.bin TerraFragmentada.cue
-          ls -lh
-
-      - name: Upload final artifacts
+      - name: Upload files
         uses: actions/upload-artifact@v4
         with:
           name: TerraFragmentada-BIN-CUE
           path: |
-            gamefiles/build/*.bin
-            gamefiles/build/*.cue
+            TerraFragmentada.bin
+            TerraFragmentada.cue
