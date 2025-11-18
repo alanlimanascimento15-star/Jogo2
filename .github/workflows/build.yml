@@ -10,33 +10,42 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    - name: Install dependencies
-      run: |
-        sudo apt update
-        sudo apt install -y build-essential cmake git
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y build-essential git python3 python3-pip wget
 
-    - name: Download PSn00bSDK
-      run: |
-        git clone https://github.com/Lameguy64/psn00bsdk.git
-        cd psn00bsdk
-        make
+      - name: Install mkpsxiso
+        run: |
+          git clone https://github.com/Lameguy64/mkpsxiso.git
+          cd mkpsxiso
+          make
+          sudo cp mkpsxiso /usr/local/bin/
 
-    - name: Extract game files
-      run: |
-        unzip TerraFragmentada.zip -d game
+      - name: Unzip TerraFragmentada.zip
+        run: |
+          unzip TerraFragmentada.zip -d gamefiles
 
-    - name: Build game
-      run: |
-        cd game
-        make
+      - name: Create XML for ISO
+        run: |
+          echo '<?xml version="1.0" encoding="UTF-8"?>' > layout.xml
+          echo '<iso system="psx">' >> layout.xml
+          echo '  <file src="gamefiles/SYSTEM.CNF" />' >> layout.xml
+          echo '  <file src="gamefiles/SLUS_000.00" />' >> layout.xml
+          echo '  <directory src="gamefiles" />' >> layout.xml
+          echo '</iso>' >> layout.xml
 
-    - name: Upload BIN and CUE
-      uses: actions/upload-artifact@v3
-      with:
-        name: TerraFragmentada_PS1
-        path: |
-          game/*.bin
-          game/*.cue
+      - name: Build BIN and CUE
+        run: |
+          mkpsxiso -y layout.xml -o TerraFragmentada.bin
+
+      - name: Upload final ZIP output
+        uses: actions/upload-artifact@v3
+        with:
+          name: TerraFragmentada-Final
+          path: |
+            TerraFragmentada.bin
+            TerraFragmentada.cue
