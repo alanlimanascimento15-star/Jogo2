@@ -1,41 +1,67 @@
-name: Build PS1 Game
+name: Build PS1 BIN/CUE
 
 on:
   push:
-    branches: [ "main" ]
+    branches:
+      - "main"
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Unzip game
+      - name: Unzip source
         run: |
-          # se o zip está na raiz do repo com esse nome
           unzip -o TerraFragmentada.zip -d gamefiles
           ls -la gamefiles
 
-      - name: Prepare files
+      - name: Install dependencies
         run: |
-          # cria pasta de saída e copia os arquivos que você quer empacotar
-          mkdir -p output
-          # ajusta o caminho segundo como o zip extraiu. Ex: se tinha pasta 'PS1' dentro do zip, troque gamefiles/* por gamefiles/PS1/*
-          cp -r gamefiles/* output/ || true
-          ls -la output
+          sudo apt update
+          sudo apt install -y build-essential cmake git python3 genisoimage
 
-      - name: Create final zip
+      - name: Download PSn00bSDK
         run: |
-          # cria um zip final contendo o que está em output
-          cd output
-          zip -r ../TerraFragmentada-Final.zip . || true
-          cd ..
-          ls -lh TerraFragmentada-Final.zip
+          git clone https://github.com/Lameguy64/PSn00bSDK.git
+          cd PSn00bSDK
+          git submodule update --init --recursive
 
-      - name: Upload final ZIP
+      - name: Build PSn00bSDK
+        run: |
+          cd PSn00bSDK
+          mkdir build && cd build
+          cmake ..
+          make -j4
+
+      - name: Compile game
+        run: |
+          cd gamefiles
+          mkdir build && cd build
+          cmake ..
+          make -j4
+          ls -la
+
+      - name: Create PS1 ISO
+        run: |
+          cd gamefiles/build
+          mkdir iso_root
+          cp TerraGame.iso iso_root/ || true
+          genisoimage -o TerraFragmentada.iso iso_root
+          ls -lh
+
+      - name: Convert ISO to BIN/CUE
+        run: |
+          sudo apt install -y bchunk
+          bchunk TerraFragmentada.iso TerraFragmentada.bin TerraFragmentada.cue
+          ls -lh
+
+      - name: Upload final artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: TerraFragmentada-Final
-          path: TerraFragmentada-Final.zip
+          name: TerraFragmentada-BIN-CUE
+          path: |
+            gamefiles/build/*.bin
+            gamefiles/build/*.cue
