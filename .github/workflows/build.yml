@@ -9,35 +9,33 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout
-      uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-    - name: Install tools
-      run: |
-        sudo apt update
-        sudo apt install -y genisoimage bchunk unzip zip
+      - name: Unzip game
+        run: |
+          # se o zip está na raiz do repo com esse nome
+          unzip -o TerraFragmentada.zip -d gamefiles
+          ls -la gamefiles
 
-    - name: Unzip Game
-      run: unzip TerraFragmentada.zip -d game
+      - name: Prepare files
+        run: |
+          # cria pasta de saída e copia os arquivos que você quer empacotar
+          mkdir -p output
+          # ajusta o caminho segundo como o zip extraiu. Ex: se tinha pasta 'PS1' dentro do zip, troque gamefiles/* por gamefiles/PS1/*
+          cp -r gamefiles/* output/ || true
+          ls -la output
 
-    - name: Build ISO
-      run: |
-        genisoimage -o game.iso -V "TERRAFRAG" -sysid "PLAYSTATION" -volset "1" -publisher "ALAN" -p "ALAN" -A "PS1GAME" game/
+      - name: Create final zip
+        run: |
+          # cria um zip final contendo o que está em output
+          cd output
+          zip -r ../TerraFragmentada-Final.zip . || true
+          cd ..
+          ls -lh TerraFragmentada-Final.zip
 
-    - name: Convert ISO to BIN/CUE
-      run: |
-        bchunk game.iso TerraFragmentada TerraFragmentada
-
-    - name: Prepare final ZIP
-      run: |
-        mkdir output
-        mv TerraFragmentada01.bin output/TerraFragmentada.bin
-        mv TerraFragmentada01.cue output/TerraFragmentada.cue
-        cd output
-        zip TerraFragmentada-Final.zip TerraFragmentada.bin TerraFragmentada.cue
-
-    - name: Upload final ZIP
-      uses: actions/upload-artifact@v3
-      with:
-        name: TerraFragmentada-PS1-Final
-        path: output/TerraFragmentada-Final.zip
+      - name: Upload final ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: TerraFragmentada-Final
+          path: TerraFragmentada-Final.zip
